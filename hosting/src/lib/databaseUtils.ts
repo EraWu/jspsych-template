@@ -1,38 +1,54 @@
-import {
-  // addDoc,
-  // collection,
-  doc,
-  // DocumentData,
-  getDoc,
-  // getDocs,
-  // getFirestore,
-  // onSnapshot,
-  runTransaction,
-  setDoc,
-  Timestamp,
-} from 'firebase/firestore'
+// import {
+//   // addDoc,
+//   // collection,
+//   doc,
+//   // DocumentData,
+//   getDoc,
+//   // getDocs,
+//   // getFirestore,
+//   // onSnapshot,
+//   runTransaction,
+//   setDoc,
+//   Timestamp,
+// } from 'firebase/firestore' // PRODUCTION
+
+// import { doc, getDataBase, getDoc, getUID, runTransaction, setDoc, Timestamp } from './mockDatabase' // DEVELOPMENT
 
 import { debugging, getDocStr, setUserInfo, UserRecord } from '../globalVariables'
 
 import { getBrowserInfo, getOSInfo, getWindowSize } from './clientNavigatorQuery'
-import { getDataBase, getUID } from './databaseAuth'
+import { FireStore } from './databaseAdapterFirestore'
+import { MockDatabase } from './databaseAdapterMock'
+
+// import { getDataBase, getUID } from './databaseAuth' // PRODUCTION
+
+/// conditional import
+// async function importModule(moduleName: string):Promise<any>{
+//   console.log("importing ", moduleName);
+//   const importedModule = await import(moduleName);
+//   console.log("\timported ...");
+//   return importedModule;
+// }
+
+// let moduleName:string = "module-a";
+// let importedModule = await importModule(moduleName);
+// console.log("importedModule", importedModule);
 
 import type { RecursiveRecordArray, TrialData } from '../project'
 
 const debug: boolean = debugging()
 
-export async function initExperimentData(uid: string): Promise<void> {
-  // Initialize User
-  const userInfo = setUserInfo(uid)
+const mock = true
 
-  if (debug) {
-    console.log(`Experiment Version: ${userInfo.version}`)
-    console.log(`Git Commit: ${userInfo.gitCommit}`)
-  }
+const db = mock ? MockDatabase : FireStore
 
-  // Initialize User's Data
-  await initData(userInfo)
-}
+const doc = db.doc
+const getDataBase = db.getDataBase
+const getDoc = db.getDoc
+const getUID = db.getUID
+const runTransaction = db.runTransaction
+const setDoc = db.setDoc
+const Timestamp = db.Timestamp
 
 async function initData(userInfo: UserRecord): Promise<void> {
   const docData = {
@@ -75,12 +91,25 @@ async function initData(userInfo: UserRecord): Promise<void> {
   }
 }
 
+export async function initExperimentData(uid: string): Promise<void> {
+  // Initialize User
+  const userInfo = setUserInfo(uid)
+
+  if (debug) {
+    console.log(`Experiment Version: ${userInfo.version}`)
+    console.log(`Git Commit: ${userInfo.gitCommit}`)
+  }
+
+  // Initialize User's Data
+  await initData(userInfo)
+}
+
 export async function saveTrialDataPartial(trialData: TrialData): Promise<boolean> {
-  const exptDataDoc = getDocStr('exptData')
-  const uid = await getUID()
-  const db = getDataBase()
-  const docRef = doc(db, exptDataDoc, uid)
   try {
+    const exptDataDoc = getDocStr('exptData')
+    const uid = await getUID()
+    const db = getDataBase()
+    const docRef = doc(db, exptDataDoc, uid)
     await runTransaction(db, async (transaction): Promise<void> => {
       // Get the latest data, rather than relying on the store
       const docSnap = await transaction.get(docRef)
@@ -108,11 +137,11 @@ export async function saveTrialDataPartial(trialData: TrialData): Promise<boolea
         console.log('Successfully saved data')
       }
     })
+    return true
   } catch (err) {
     console.error('Error saving data:: ', err)
     return false
   }
-  return true
 }
 
 export async function saveTrialDataComplete(jsPsychDataTrials: unknown[]): Promise<boolean> {

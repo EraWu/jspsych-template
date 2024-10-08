@@ -1,11 +1,11 @@
-import { initJsPsych } from 'jspsych'
-
 import jsPsychHtmlKeyboardResponse from '@jspsych/plugin-html-keyboard-response'
 import jsPsychImageKeyboardResponse from '@jspsych/plugin-image-keyboard-response'
 import jsPsychPreload from '@jspsych/plugin-preload'
+import { initJsPsych } from 'jspsych'
 
 import { debugging, getUserInfo, prolificCC, prolificCUrl } from './globalVariables'
 import { saveTrialDataComplete, saveTrialDataPartial } from './lib/databaseUtils'
+import { getMockDbState } from './lib/mockDatabase' // DEBUG-PANEL
 
 import type { KeyboardResponse, Task, TrialData } from './project'
 import type { DataCollection } from 'jspsych'
@@ -20,6 +20,29 @@ import imgStimOrange from './images/orange.png'
  */
 
 const debug = debugging()
+const mockDatabase = true
+
+/* DEBUG-PANEL */
+
+const debugButton = document.getElementById('debug-panel-button')
+const debugPanel = document.getElementById('debug-panel-display')
+const debugPanelPre = document.getElementById('debug-panel-code')
+
+function updateDebugPanel() {
+  if (debugPanelPre) {
+    debugPanelPre.textContent = JSON.stringify(getMockDbState(), null, 2)
+  }
+}
+
+function toggleDebugPanel() {
+  debugPanel?.classList.toggle('hidden')
+  updateDebugPanel()
+}
+
+debugButton?.addEventListener('click', () => {
+  debugButton.blur()
+  toggleDebugPanel()
+})
 
 const debuggingText = debug ? `<br /><br />redirect link : ${prolificCUrl}` : '<br />'
 const exitMessage = `<p class="align-middle text-center"> 
@@ -59,6 +82,9 @@ export async function runExperiment() {
           () => {
             if (debug) {
               console.log('saveTrialDataPartial: Success') // Success!
+              if (mockDatabase) {
+                updateDebugPanel()
+              }
             }
           },
           (err: unknown) => {
@@ -190,6 +216,21 @@ export async function runExperiment() {
     },
   }
   timeline.push(debrief_block)
+
+  /* DEBUG-PANEL */
+  if (debug) {
+    if (debugButton) {
+      debugButton.hidden = false
+      debugButton.classList.remove('jspsych-display-element', 'hidden')
+    }
+    if (debugPanel) {
+      debugPanel.hidden = false
+      debugPanel.classList.remove('jspsych-display-element')
+    }
+  } else {
+    debugButton?.remove()
+    debugPanel?.remove()
+  }
 
   /* start the experiment */
   // @ts-expect-error allow timeline to be type jsPsych TimelineArray

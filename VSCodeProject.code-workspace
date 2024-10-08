@@ -30,10 +30,11 @@
       "**/.yarn": true,
       "**/.pnp.*": true
     },
-    "eslint.nodePath": ".yarn/sdks",
-    "prettier.prettierPath": ".yarn/sdks/prettier/index.cjs",
-    "typescript.tsdk": ".yarn/sdks/typescript/lib",
-    "typescript.enablePromptUseWorkspaceTsdk": true
+    // "eslint.nodePath": ".yarn/sdks",
+    // "typescript.tsdk": ".yarn/sdks/typescript/lib",
+    "typescript.enablePromptUseWorkspaceTsdk": true,
+    "prettier.prettierPath": "./node_modules/prettier",
+    "prettier.configPath": "./prettier.config.cjs"
   },
   "extensions": {
     "recommendations": ["dbaeumer.vscode-eslint", "esbenp.prettier-vscode", "bradlc.vscode-tailwindcss", "arcanis.vscode-zipfs"]
