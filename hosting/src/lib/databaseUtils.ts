@@ -12,43 +12,28 @@
 //   Timestamp,
 // } from 'firebase/firestore' // PRODUCTION
 
-// import { doc, getDataBase, getDoc, getUID, runTransaction, setDoc, Timestamp } from './mockDatabase' // DEVELOPMENT
+import { Timestamp } from 'firebase/firestore'
 
-import { debugging, getDocStr, setUserInfo, UserRecord } from '../globalVariables'
+import { debugging, getDocStr, mockStore, setUserInfo, UserRecord } from '../globalVariables'
 
 import { getBrowserInfo, getOSInfo, getWindowSize } from './clientNavigatorQuery'
 import { FireStore } from './databaseAdapterFirestore'
 import { MockDatabase } from './databaseAdapterMock'
 
-// import { getDataBase, getUID } from './databaseAuth' // PRODUCTION
-
-/// conditional import
-// async function importModule(moduleName: string):Promise<any>{
-//   console.log("importing ", moduleName);
-//   const importedModule = await import(moduleName);
-//   console.log("\timported ...");
-//   return importedModule;
-// }
-
-// let moduleName:string = "module-a";
-// let importedModule = await importModule(moduleName);
-// console.log("importedModule", importedModule);
-
 import type { RecursiveRecordArray, TrialData } from '../project'
 
 const debug: boolean = debugging()
 
-const mock = true
+const mock = mockStore()
 
-const db = mock ? MockDatabase : FireStore
+const databaseBackend = mock ? MockDatabase : FireStore
 
-const doc = db.doc
-const getDataBase = db.getDataBase
-const getDoc = db.getDoc
-const getUID = db.getUID
-const runTransaction = db.runTransaction
-const setDoc = db.setDoc
-const Timestamp = db.Timestamp
+const doc = databaseBackend.doc as typeof import('firebase/firestore').doc
+const getDataBase = databaseBackend.getDataBase as typeof import('firebase/firestore').getFirestore
+const getDoc = databaseBackend.getDoc as typeof import('firebase/firestore').getDoc
+const getUID = databaseBackend.getUID
+const runTransaction = databaseBackend.runTransaction as typeof import('firebase/firestore').runTransaction
+const setDoc = databaseBackend.setDoc as typeof import('firebase/firestore').setDoc
 
 async function initData(userInfo: UserRecord): Promise<void> {
   const docData = {
@@ -65,16 +50,20 @@ async function initData(userInfo: UserRecord): Promise<void> {
   const exptDataDoc = getDocStr('exptData')
   const uid = await getUID()
   const db = getDataBase()
+
   const docRef = doc(db, exptDataDoc, uid)
   const docSnap = await getDoc(docRef)
 
   if (docSnap.exists()) {
     const existingData = docSnap.data()
+
     if (existingData.hasOwnProperty('priorInits')) {
       let { priorInits, ...existingDataReduced } = existingData
       if (priorInits instanceof Array) {
-        // @ts-expect-error allow priorInits to by unknown
-        docData.priorInits = [...priorInits, existingDataReduced]
+        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+        // @ts-ignore
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+        docData['priorInits'] = [...priorInits, existingDataReduced]
       } else {
         // @ts-expect-error allow priorInits to by unknown
         docData.priorInits = [priorInits, existingDataReduced]
@@ -109,20 +98,25 @@ export async function saveTrialDataPartial(trialData: TrialData): Promise<boolea
     const exptDataDoc = getDocStr('exptData')
     const uid = await getUID()
     const db = getDataBase()
+
     const docRef = doc(db, exptDataDoc, uid)
     await runTransaction(db, async (transaction): Promise<void> => {
       // Get the latest data, rather than relying on the store
+
       const docSnap = await transaction.get(docRef)
+
       if (!docSnap.exists()) {
         throw new Error('saveTrialDataPartial: Document does not exist')
       }
 
       // Get the latest trial and current trial
+
       const userData = docSnap.data()
 
       const data: Record<string, unknown[]> = {}
 
       if ('trialsPartial' in userData) {
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
         data.trialsPartial = userData.trialsPartial
       } else {
         data.trialsPartial = []
@@ -131,6 +125,7 @@ export async function saveTrialDataPartial(trialData: TrialData): Promise<boolea
       data.trialsPartial.push(trialData)
 
       // Update the fields in responseData directly
+
       transaction.update(docRef, data)
 
       if (debug) {
@@ -148,11 +143,14 @@ export async function saveTrialDataComplete(jsPsychDataTrials: unknown[]): Promi
   const exptDataDoc = getDocStr('exptData')
   const uid = await getUID()
   const db = getDataBase()
+
   const docRef = doc(db, exptDataDoc, uid)
   try {
     await runTransaction(db, async (transaction): Promise<void> => {
       // Get the latest data, rather than relying on the store
+
       const docSnap = await transaction.get(docRef)
+
       if (!docSnap.exists()) {
         throw new Error('saveTrialDataComplete: Document does not exist')
       }
@@ -163,6 +161,7 @@ export async function saveTrialDataComplete(jsPsychDataTrials: unknown[]): Promi
       }
 
       // Update the fields in responseData directly
+
       transaction.update(docRef, data)
 
       if (debug) {
@@ -180,16 +179,20 @@ export async function saveRootData(responseData: RecursiveRecordArray): Promise<
   const exptDataDoc = getDocStr('exptData')
   const uid = await getUID()
   const db = getDataBase()
+
   const docRef = doc(db, exptDataDoc, uid)
   try {
     await runTransaction(db, async (transaction): Promise<void> => {
       // Get the latest data, rather than relying on the store
+
       const docSnap = await transaction.get(docRef)
+
       if (!docSnap.exists()) {
         throw new Error('saveRootData: Document does not exist')
       }
 
       // Update the fields in responseData directly
+
       transaction.update(docRef, responseData)
 
       if (debug) {

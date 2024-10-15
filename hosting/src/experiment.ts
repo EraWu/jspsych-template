@@ -3,9 +3,8 @@ import jsPsychImageKeyboardResponse from '@jspsych/plugin-image-keyboard-respons
 import jsPsychPreload from '@jspsych/plugin-preload'
 import { initJsPsych } from 'jspsych'
 
-import { debugging, getUserInfo, prolificCC, prolificCUrl } from './globalVariables'
+import { debugging, getUserInfo, mockStore, prolificCC, prolificCUrl } from './globalVariables'
 import { saveTrialDataComplete, saveTrialDataPartial } from './lib/databaseUtils'
-import { getMockDbState } from './lib/mockDatabase' // DEBUG-PANEL
 
 import type { KeyboardResponse, Task, TrialData } from './project'
 import type { DataCollection } from 'jspsych'
@@ -52,19 +51,22 @@ If not, please use the following completion code to ensure compensation for this
 ${debuggingText}
 </p>`
 
-const exitExperiment = () => {
+const randCond: string = ['A', 'B'][Math.round(Math.random())]
+console.log('randCond:', randCond)
+
+const exitExperiment = (): void => {
   document.body.innerHTML = exitMessage
   setTimeout(() => {
     window.location.replace(prolificCUrl)
   }, 3000)
 }
 
-const exitExperimentDebugging = () => {
+const exitExperimentDebugging = (): void => {
   const contentDiv = document.getElementById('jspsych-content')
   if (contentDiv) contentDiv.innerHTML = exitMessage
 }
 
-export async function runExperiment() {
+export async function runExperiment(updateDebugPanel: () => void) {
   if (debug) {
     console.log('--runExperiment--')
     console.log('UserInfo ::', getUserInfo())
@@ -82,7 +84,7 @@ export async function runExperiment() {
           () => {
             if (debug) {
               console.log('saveTrialDataPartial: Success') // Success!
-              if (mockDatabase) {
+              if (mock) {
                 updateDebugPanel()
               }
             }
@@ -129,9 +131,28 @@ export async function runExperiment() {
   timeline.push(preload)
 
   /* define welcome message trial */
+  const someStim = ['Stim1', 'Stim2', 'Stim3']
+  for (const istim of someStim) {
+    timeline.push({
+      type: jsPsychHtmlKeyboardResponse,
+      stimulus: `<span class="text-xl">istim ${istim} (cond ${randCond}). Press any key to advance.</span>`,
+      data: {
+        task: 'response' as Task,
+        stimID: istim,
+      },
+      on_finish: function (data: TrialData) {
+        data.saveToFirestore = true
+      },
+    })
+  }
+
+  const welcomeMessage =
+    randCond === 'A'
+      ? `<span class="text-xl">Welcome to the experiment (cond ${randCond}). Press any key to begin.</span>`
+      : `<span class="text-xl">What are we doing in condition ${randCond} </span>`
   const welcome = {
     type: jsPsychHtmlKeyboardResponse,
-    stimulus: '<span class="text-xl">Welcome to the experiment. Press any key to begin.</span>',
+    stimulus: welcomeMessage,
   }
   timeline.push(welcome)
 
@@ -216,21 +237,6 @@ export async function runExperiment() {
     },
   }
   timeline.push(debrief_block)
-
-  /* DEBUG-PANEL */
-  if (debug) {
-    if (debugButton) {
-      debugButton.hidden = false
-      debugButton.classList.remove('jspsych-display-element', 'hidden')
-    }
-    if (debugPanel) {
-      debugPanel.hidden = false
-      debugPanel.classList.remove('jspsych-display-element')
-    }
-  } else {
-    debugButton?.remove()
-    debugPanel?.remove()
-  }
 
   /* start the experiment */
   // @ts-expect-error allow timeline to be type jsPsych TimelineArray

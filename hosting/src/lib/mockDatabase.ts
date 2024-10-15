@@ -5,42 +5,40 @@
 /* eslint @typescript-eslint/no-unsafe-member-access: 0 */
 /* eslint @typescript-eslint/no-unsafe-return: 0 */
 
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-nocheck
+
+import { Firestore } from 'firebase/firestore'
+
 import { debugging, UserRecord } from '../globalVariables'
 import { enableBeginExperiment } from '../main'
 
 import { initExperimentData } from './databaseUtils'
 
-import type { RecursiveRecordArray, TrialData } from '../project'
+// import { doc, getDoc, runTransaction, setDoc, Timestamp } from 'firebase/firestore'
 
-const mockDb: Record<string, any> = {}
-let mockUid: string | null = null
+// export declare class Firestore {
+//   /**
+//    * Whether it's a {@link Firestore} or Firestore Lite instance.
+//    */
+//   type: 'firestore-lite' | 'firestore'
+//   private constructor()
+//   /**
+//    * The {@link @firebase/app#FirebaseApp} associated with this `Firestore` service
+//    * instance.
+//    */
+//   // get app(): FirebaseApp;
+//   /**
+//    * Returns a JSON-serializable representation of this `Firestore` instance.
+//    */
+//   toJSON(): object
+// }
+
+const mockDb = {} as Firestore
+
+let mockUid: string | null = 'mock-user-' + Math.random().toString(36).substring(2, 11)
 
 const debug: boolean = debugging()
-
-console.log('mockDatabase: debugging: ', debug)
-
-export class Timestamp {
-  seconds: number
-  nanoseconds: number
-
-  constructor(seconds: number, nanoseconds: number) {
-    this.seconds = seconds
-    this.nanoseconds = nanoseconds
-  }
-
-  static now(): Timestamp {
-    const now = Date.now()
-    return new Timestamp(Math.floor(now / 1000), (now % 1000) * 1e6)
-  }
-
-  toDate(): Date {
-    return new Date(this.seconds * 1000 + this.nanoseconds / 1e6)
-  }
-
-  toString(): string {
-    return this.toDate().toISOString()
-  }
-}
 
 // export const getFirestore = () => mockDb
 
@@ -76,7 +74,7 @@ export const getUID = async (): Promise<string> => {
   return mockUid
 }
 
-export const getDataBase = () => mockDb
+export const getDataBase = (): Firestore => mockDb
 
 ////////////////////////
 
@@ -88,7 +86,7 @@ getUID().then(
       () => {
         enableBeginExperiment()
         if (debug) {
-          console.log('onAuthStateChanged(): initExperimentData(): Success') // Success!
+          console.log('initExperimentData(): Success') // Success!
         }
       },
       (err: unknown) => {

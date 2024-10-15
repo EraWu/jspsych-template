@@ -16,17 +16,6 @@ This repository is an example of how to setup a development environment for buil
 - Git clone the forked repo (replace with your repo info): e.g. `git clone --branch main https://github.com/daeh/jspsych-template.git jspsych-template`
 - Enter the repo folder (replace with your repo info): e.g. `cd jspsych-template`
 
-### Firebase Configuration
-
-After you setup your Firebase and Firestore services, add your configurations to
-
-- [`.firebaserc`](.firebaserc)
-- [`databaseCred.ts`](hosting/src/lib/databaseCred.ts)
-
-You don't need to set up prolific to develop the experiment, but after you've made a prolific project, add the completion code to
-
-- [`prolificCred.ts`](hosting/src/lib/prolificCred.ts)
-
 ### Install Node Dependencies
 
 Install the dependencies using [Yarn](https://yarnpkg.com/)
@@ -38,9 +27,6 @@ Install the dependencies using [Yarn](https://yarnpkg.com/)
 
 ### Install the Firebase dependencies
 yarn install
-
-### Push the Firestore rules (defined in firestore.rules)
-yarn deploy-rules
 
 ### Start the Vite server
 yarn dev
@@ -70,9 +56,13 @@ To develop the website, run `yarn dev`, which will open a localhost Vite server 
 
 ### Sandbox
 
-When developing the experiment, you can set `const debug = true` in [`globalVariables.ts`](hosting/src/globalVariables.ts). This will increase the verbosity of the console output.
+You don't need to set up Firebase, Firestore or Prolific to develop the experiment. This app comes built to start development immediately. There are primarily two toggles to help with sandboxed development, which are found in [`globalVariables.ts`](hosting/src/globalVariables.ts).
 
-Alternatively, you can force debugging mode by including `debug` as a URL Parameter, e.g. `https://mysite.web.app/?debug`
+- Setting `const debug = true` will increase the verbosity of the console output.
+
+  - Alternatively, you can force debugging mode by including `debug` as a URL Parameter, e.g. `https://mysite.web.app/?debug`
+
+- Setting `const mock = true` will make the app use a serverless emulator so that you don't have to set up Firestore before beginning development.
 
 # Configuration
 
@@ -203,6 +193,33 @@ If you change the project from an `ES Module` to a `Common.js Module`, or if ESL
 
 TODO: describe how to setup hosting and database
 
+Here's a [useful guide](https://firebase.google.com/docs/hosting/quickstart)
+
+After you setup your Firebase and Firestore accounts and services, add your configurations to
+
+- [`.firebaserc`](.firebaserc)
+- [`databaseCred.ts`](hosting/src/lib/databaseCred.ts)
+
+### Firestore
+
+Push the Firestore rules (defined in firestore.rules)
+
+```sh
+yarn deploy-rules
+```
+
+Once you have the rules deployed, you can switch from using the mock database (a simple database emulator) to Firestore.
+
+Set `const mock = false` in [`globalVariables.ts`](hosting/src/globalVariables.ts). This will cause the application to use [`databaseCred.ts`](hosting/src/lib/databaseCred.ts) and store the input in Firestore. In production, the app writes to `exptData/:uid`, but will instead write to `exptData-dbug/:uid` when it is in debugging mode or running locally. This is so that there's no confusion about what data was generated locally during development.
+
+### Firebase
+
+When you're ready to deploy the website, push it to Firebase
+
+```sh
+yarn deploy
+```
+
 </details>
 
 ## Data Collection
@@ -210,7 +227,6 @@ TODO: describe how to setup hosting and database
 ### Prolific Configuration
 
 <details>
-
 <summary>Prolific URL Search Params</summary>
 
 ### Prolific URL Search Params
@@ -221,7 +237,7 @@ The project is looks for Prolific URL parameters and stores them. Make sure that
 
 ### Prolific Completion Code
 
-In order to register that Prolific users have completed the experiment, add the study's **Completion Code** to `const prolificCCReal = ...` in [`globalVariables.ts`](hosting/src/globalVariables.ts).
+In order to register that Prolific users have completed the experiment, add the study's **Completion Code** to `const prolificCCReal = ...` in [`prolificCred.ts`](hosting/src/lib/prolificCred.ts).
 
 </details>
 
@@ -233,7 +249,7 @@ The script [`scripts/releaseScript.mjs`](scripts/releaseScript.mjs) automates de
 yarn release
 ```
 
-The script will walk you through committing your changes to git repo [that you forked](#installation).
+The script will walk you through committing your changes to the git repo [that you forked](#installation).
 
 A key idea here is that there should never be ambiguity about what code was served to a participant.
 
