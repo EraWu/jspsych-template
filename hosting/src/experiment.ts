@@ -19,29 +19,7 @@ import imgStimOrange from './images/orange.png'
  */
 
 const debug = debugging()
-const mockDatabase = true
-
-/* DEBUG-PANEL */
-
-const debugButton = document.getElementById('debug-panel-button')
-const debugPanel = document.getElementById('debug-panel-display')
-const debugPanelPre = document.getElementById('debug-panel-code')
-
-function updateDebugPanel() {
-  if (debugPanelPre) {
-    debugPanelPre.textContent = JSON.stringify(getMockDbState(), null, 2)
-  }
-}
-
-function toggleDebugPanel() {
-  debugPanel?.classList.toggle('hidden')
-  updateDebugPanel()
-}
-
-debugButton?.addEventListener('click', () => {
-  debugButton.blur()
-  toggleDebugPanel()
-})
+const mock = mockStore()
 
 const debuggingText = debug ? `<br /><br />redirect link : ${prolificCUrl}` : '<br />'
 const exitMessage = `<p class="align-middle text-center"> 
