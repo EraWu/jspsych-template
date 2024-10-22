@@ -101,19 +101,12 @@ export async function runExperiment(updateDebugPanel: () => void) {
   /* create timeline */
   const timeline: Record<string, any>[] = []
 
-  /* preload images */
-  const preload = {
-    type: jsPsychPreload,
-    images: [imgStimBlue, imgStimOrange],
-  }
-  timeline.push(preload)
-
   /* define welcome message trial */
   const someStim = ['Stim1', 'Stim2', 'Stim3']
   for (const istim of someStim) {
     timeline.push({
       type: jsPsychHtmlKeyboardResponse,
-      stimulus: `<span class="text-xl">istim ${istim} (cond ${randCond}). Press any key to advance.</span>`,
+      stimulus: 'Welcome to the experiment! Press any key to start.',
       data: {
         task: 'response' as Task,
         stimID: istim,
@@ -155,41 +148,52 @@ export async function runExperiment(updateDebugPanel: () => void) {
   }
   timeline.push(instructions)
 
-  /* define trial stimuli array for timeline variables */
-  const test_stimuli: Record<string, string>[] = [
-    { stimulus: imgStimBlue, correct_response: 'f' as KeyboardResponse },
-    { stimulus: imgStimOrange, correct_response: 'j' as KeyboardResponse },
+  /* define vignettes and questions */
+  const vignettes = [
+    'Vignette 1 text here',
+    'Vignette 2 text here',
+    'Vignette 3 text here',
+    'Vignette 4 text here',
+    'Vignette 5 text here',
+    'Vignette 6 text here',
+    'Vignette 7 text here',
+    'Vignette 8 text here',
+    'Vignette 9 text here',
+    'Vignette 10 text here',
+    'Vignette 11 text here',
+    'Vignette 12 text here',
   ]
+  /* select 4 random vignettes */
+  const selectedVignettes = jsPsych.randomization.sampleWithoutReplacement(vignettes, 4)
 
-  /* define fixation and test trials */
-  const fixation = {
-    type: jsPsychHtmlKeyboardResponse,
-    stimulus: '<div style="font-size:60px;">+</div>',
-    choices: 'NO_KEYS',
-    trial_duration: function () {
-      return jsPsych.randomization.sampleWithoutReplacement(
-        [250, 500, 750, 1000, 1250, 1500, 1750, 2000],
-        1,
-      )[0] as number
-    },
-    data: {
-      task: 'fixation' as Task,
-    },
-  }
+  selectedVignettes.forEach((vignette) => {
+    timeline.push({
+      type: 'html-keyboard-response',
+      stimulus: vignette,
+      choices: jsPsych.NO_KEYS,
+      trial_duration: 5000, // 5-second duration for displaying the vignette
+    })
 
-  const test = {
-    type: jsPsychImageKeyboardResponse,
-    stimulus: jsPsych.timelineVariable('stimulus') as unknown as string,
-    choices: ['f', 'j'] as KeyboardResponse[],
-    data: {
-      task: 'response' as Task,
-      correct_response: jsPsych.timelineVariable('correct_response') as unknown as string,
-    },
-    on_finish: function (data: TrialData) {
-      data.correct = jsPsych.pluginAPI.compareKeys(data.response || null, data.correct_response || null)
-      data.saveToFirestore = true
-    },
-  }
+    /* collect emotional label ratings for each vignette */
+    timeline.push({
+      type: 'survey-likert',
+      questions: [
+        { prompt: 'To what extent is the agent feeling happy?', labels: ['Not at all', 'Extremely'], required: true },
+        { prompt: 'To what extent is the agent feeling sad?', labels: ['Not at all', 'Extremely'], required: true },
+        // Add more emotion questions
+      ],
+    })
+
+    /* collect appraisal responses for each vignette */
+    timeline.push({
+      type: 'survey-likert',
+      questions: [
+        { prompt: 'Was the event intentional?', labels: ['Not at all', 'Very much'], required: true },
+        { prompt: 'Was the event controllable?', labels: ['Not at all', 'Very much'], required: true },
+        // Add more appraisal questions
+      ],
+    })
+  })
 
   /* define test procedure */
   const test_procedure = {
