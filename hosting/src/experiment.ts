@@ -4,13 +4,12 @@ import jsPsychPreload from '@jspsych/plugin-preload'
 import { initJsPsych } from 'jspsych'
 
 import { debugging, getUserInfo, mockStore, prolificCC, prolificCUrl } from './globalVariables'
-import { saveTrialDataComplete, saveTrialDataPartial } from './lib/databaseUtils'
-
-import type { KeyboardResponse, Task, TrialData } from './project'
-import type { DataCollection } from 'jspsych'
-
 import imgStimBlue from './images/blue.png'
 import imgStimOrange from './images/orange.png'
+import { saveTrialDataComplete, saveTrialDataPartial } from './lib/databaseUtils'
+
+import type { SaveableDataRecord } from '../types/project'
+import type { DataCollection } from 'jspsych'
 
 /* Alternatively
  * type JsPsychInstance = ReturnType<typeof initJsPsych>
@@ -21,6 +20,18 @@ import imgStimOrange from './images/orange.png'
 const debug = debugging()
 const mock = mockStore()
 
+type Task = 'response' | 'fixation'
+type Response = 'left' | 'right'
+type KeyboardResponse = 'f' | 'j'
+
+interface TrialData {
+  task: Task
+  response: Response
+  correct: boolean
+  correct_response: Response
+  saveIncrementally: boolean
+}
+
 const debuggingText = debug ? `<br /><br />redirect link : ${prolificCUrl}` : '<br />'
 const exitMessage = `<p class="align-middle text-center"> 
 Please wait. You will be redirected back to Prolific in a few moments. 
@@ -28,9 +39,6 @@ Please wait. You will be redirected back to Prolific in a few moments.
 If not, please use the following completion code to ensure compensation for this study: ${prolificCC}
 ${debuggingText}
 </p>`
-
-const randCond: string = ['A', 'B'][Math.round(Math.random())]
-console.log('randCond:', randCond)
 
 const exitExperiment = (): void => {
   document.body.innerHTML = exitMessage
@@ -56,9 +64,9 @@ export async function runExperiment(updateDebugPanel: () => void) {
       if (debug) {
         console.log('jsPsych-update :: trialData ::', trialData)
       }
-      // if trialData contains a saveToFirestore property, and the property is true, then save the trialData to Firestore
-      if (trialData.saveToFirestore) {
-        saveTrialDataPartial(trialData).then(
+      // if trialData contains a saveIncrementally property, and the property is true, then save the trialData to Firestore immediately (otherwise the data will be saved at the end of the experiment)
+      if (trialData.saveIncrementally) {
+        saveTrialDataPartial(trialData as unknown as SaveableDataRecord).then(
           () => {
             if (debug) {
               console.log('saveTrialDataPartial: Success') // Success!
@@ -99,31 +107,19 @@ export async function runExperiment(updateDebugPanel: () => void) {
   })
 
   /* create timeline */
-  const timeline: Record<string, any>[] = []
+  const timeline: Record<string, unknown>[] = []
+
+  /* preload images */
+  const preload = {
+    type: jsPsychPreload,
+    images: [imgStimBlue, imgStimOrange],
+  }
+  timeline.push(preload)
 
   /* define welcome message trial */
-  const someStim = ['Stim1', 'Stim2', 'Stim3']
-  for (const istim of someStim) {
-    timeline.push({
-      type: jsPsychHtmlKeyboardResponse,
-      stimulus: 'Welcome to the experiment! Press any key to start.',
-      data: {
-        task: 'response' as Task,
-        stimID: istim,
-      },
-      on_finish: function (data: TrialData) {
-        data.saveToFirestore = true
-      },
-    })
-  }
-
-  const welcomeMessage =
-    randCond === 'A'
-      ? `<span class="text-xl">Welcome to the experiment (cond ${randCond}). Press any key to begin.</span>`
-      : `<span class="text-xl">What are we doing in condition ${randCond} </span>`
   const welcome = {
     type: jsPsychHtmlKeyboardResponse,
-    stimulus: welcomeMessage,
+    stimulus: '<span class="text-xl">Welcome to the experiment. Press any key to begin.</span>',
   }
   timeline.push(welcome)
 
@@ -148,52 +144,41 @@ export async function runExperiment(updateDebugPanel: () => void) {
   }
   timeline.push(instructions)
 
-  /* define vignettes and questions */
-  const vignettes = [
-    'Vignette 1 text here',
-    'Vignette 2 text here',
-    'Vignette 3 text here',
-    'Vignette 4 text here',
-    'Vignette 5 text here',
-    'Vignette 6 text here',
-    'Vignette 7 text here',
-    'Vignette 8 text here',
-    'Vignette 9 text here',
-    'Vignette 10 text here',
-    'Vignette 11 text here',
-    'Vignette 12 text here',
+  /* define trial stimuli array for timeline variables */
+  const test_stimuli: Record<string, string>[] = [
+    { stimulus: imgStimBlue, correct_response: 'f' as KeyboardResponse },
+    { stimulus: imgStimOrange, correct_response: 'j' as KeyboardResponse },
   ]
-  /* select 4 random vignettes */
-  const selectedVignettes = jsPsych.randomization.sampleWithoutReplacement(vignettes, 4)
 
-  selectedVignettes.forEach((vignette) => {
-    timeline.push({
-      type: 'html-keyboard-response',
-      stimulus: vignette,
-      choices: jsPsych.NO_KEYS,
-      trial_duration: 5000, // 5-second duration for displaying the vignette
-    })
+  /* define fixation and test trials */
+  const fixation = {
+    type: jsPsychHtmlKeyboardResponse,
+    stimulus: '<div style="font-size:60px;">+</div>',
+    choices: 'NO_KEYS',
+    trial_duration: function () {
+      return jsPsych.randomization.sampleWithoutReplacement(
+        [250, 500, 750, 1000, 1250, 1500, 1750, 2000],
+        1,
+      )[0] as number
+    },
+    data: {
+      task: 'fixation' satisfies Task,
+    },
+  }
 
-    /* collect emotional label ratings for each vignette */
-    timeline.push({
-      type: 'survey-likert',
-      questions: [
-        { prompt: 'To what extent is the agent feeling happy?', labels: ['Not at all', 'Extremely'], required: true },
-        { prompt: 'To what extent is the agent feeling sad?', labels: ['Not at all', 'Extremely'], required: true },
-        // Add more emotion questions
-      ],
-    })
-
-    /* collect appraisal responses for each vignette */
-    timeline.push({
-      type: 'survey-likert',
-      questions: [
-        { prompt: 'Was the event intentional?', labels: ['Not at all', 'Very much'], required: true },
-        { prompt: 'Was the event controllable?', labels: ['Not at all', 'Very much'], required: true },
-        // Add more appraisal questions
-      ],
-    })
-  })
+  const test = {
+    type: jsPsychImageKeyboardResponse,
+    stimulus: jsPsych.timelineVariable('stimulus') as unknown as string,
+    choices: ['f', 'j'] satisfies KeyboardResponse[],
+    data: {
+      task: 'response' satisfies Task,
+      correct_response: jsPsych.timelineVariable('correct_response') as unknown as string,
+    },
+    on_finish: function (data: TrialData) {
+      data.correct = jsPsych.pluginAPI.compareKeys(data.response || null, data.correct_response || null)
+      data.saveIncrementally = true
+    },
+  }
 
   /* define test procedure */
   const test_procedure = {

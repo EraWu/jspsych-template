@@ -1,12 +1,12 @@
 import { description, version } from '../../package.json'
 
-import { prolificCCode } from './lib/prolificCred'
-
-const debug: boolean = true
-
-const mock: boolean = true
-
-const prolificCUrlLive = `https://app.prolific.com/submissions/complete?cc=${prolificCCode}`
+import {
+  debuggingMode as debug,
+  simulateMockDatabase as mock,
+  prolificCCode,
+  prolificCUrlLive,
+  prolificCUrlTest,
+} from './config'
 
 const gitCommit: string = __COMMIT_HASH__ || 'unknown'
 
@@ -142,4 +142,6 @@ export function getDocStr(docId: string) {
 }
 
 export const prolificCC = definitelyLive() ? prolificCCode : 'TESTING'
-export const prolificCUrl = definitelyLive() ? prolificCUrlLive : `https://daeh.info/?prolific&cc=${prolificCC}`
+export const prolificCUrl = definitelyLive()
+  ? `${prolificCUrlLive}?cc=${prolificCCode}`
+  : `${prolificCUrlTest}?prolific&cc=${prolificCC}`
